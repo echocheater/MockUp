@@ -1,1 +1,325 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kamera Sofa Transparan</title>
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0b0f19;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
 
+        .app-container {
+            position: relative;
+            width: 100%;
+            max-width: 480px;
+            height: 100vh;
+            max-height: 850px;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        @media (min-width: 481px) {
+            .app-container {
+                border-radius: 24px;
+                height: 85vh;
+            }
+        }
+
+        .viewport {
+            position: relative;
+            flex: 1;
+            width: 100%;
+            overflow: hidden;
+            background: #111;
+        }
+
+        /* 1. Video Kamera */
+        #webcam {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* 2. Layer Overlay Gambar PNG Anda */
+        .overlay-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('mockup.png'); /* Ganti dengan nama file gambar Anda */
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            pointer-events: none; /* Sentuhan tembus ke bawah jika diperlukan */
+            z-index: 2;
+        }
+
+        /* Canvas tersembunyi untuk proses rendering foto */
+        #captureCanvas {
+            display: none;
+        }
+
+        /* Kontrol Panel di Bawah */
+        .control-panel {
+            padding: 20px;
+            background: rgba(11, 15, 25, 0.85);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 10;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn {
+            background: #ffffff;
+            color: #0b0f19;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(255,255,255,0.2);
+            transition: transform 0.1s ease, background 0.2s ease;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn-capture {
+            background: linear-gradient(135deg, #ff416c, #ff4b2b);
+            color: white;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            padding: 0;
+            justify-content: center;
+            box-shadow: 0 6px 20px rgba(255, 75, 43, 0.4);
+            border: 4px solid rgba(255,255,255,0.3);
+        }
+
+        .btn-icon {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            padding: 0;
+            justify-content: center;
+        }
+
+        /* Hasil Preview Foto / Modal */
+        #resultModal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        #resultImage {
+            max-width: 100%;
+            max-height: 70vh;
+            border-radius: 12px;
+            object-fit: contain;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .instruction {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.6);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            z-index: 10;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.15);
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="instruction">
+        Arahkan kamera ke warna yang diinginkan untuk mengisi bentuk sofa transparan.
+    </div>
+
+    <div class="viewport">
+        <!-- Elemen Video Kamera -->
+        <video id="webcam" autoplay playsinline muted></video>
+        
+        <!-- Gambar Overlay PNG Transparan Anda -->
+        <div class="overlay-image" id="overlayImg"></div>
+    </div>
+
+    <!-- Canvas tersembunyi untuk menggabungkan video & gambar -->
+    <canvas id="captureCanvas"></canvas>
+
+    <!-- Panel Tombol Kontrol -->
+    <div class="control-panel">
+        <button class="btn btn-icon" id="switchCameraBtn" title="Ganti Kamera">🔄</button>
+        <button class="btn btn-capture" id="captureBtn" title="Ambil Foto"></button>
+        <button class="btn btn-icon" id="infoBtn" title="Info">ℹ️</button>
+    </div>
+
+    <!-- Tampilan Hasil Foto (Modal) -->
+    <div id="resultModal">
+        <img id="resultImage" alt="Hasil Foto Sofa">
+        <div class="modal-buttons">
+            <a id="downloadBtn" class="btn" download="sofa-warna.png">💾 Simpan Foto</a>
+            <button class="btn" id="retakeBtn" style="background: rgba(255,255,255,0.2); color: white;">❌ Ulangi</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const video = document.getElementById('webcam');
+    const captureBtn = document.getElementById('captureBtn');
+    const switchCameraBtn = document.getElementById('switchCameraBtn');
+    const canvas = document.getElementById('captureCanvas');
+    const resultModal = document.getElementById('resultModal');
+    const resultImage = document.getElementById('resultImage');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const retakeBtn = document.getElementById('retakeBtn');
+    const infoBtn = document.getElementById('infoBtn');
+
+    let currentFacingMode = 'environment'; // Default kamera belakang HP
+    let currentStream = null;
+
+    // Fungsi untuk menyalakan kamera
+    async function startCamera(facingMode) {
+        if (currentStream) {
+            currentStream.getTracks().forEach(track => track.stop());
+        }
+
+        try {
+            const constraints = {
+                video: {
+                    facingMode: facingMode,
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                },
+                audio: false
+            };
+            currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+            video.srcObject = currentStream;
+        } catch (err) {
+            console.error("Gagal mengakses kamera:", err);
+            alert("Tidak dapat mengakses kamera. Pastikan izin kamera telah diberikan.");
+        }
+    }
+
+    // Jalankan kamera saat halaman dimuat
+    startCamera(currentFacingMode);
+
+    // Tombol Ganti Kamera (Depan / Belakang)
+    switchCameraBtn.addEventListener('click', () => {
+        currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+        startCamera(currentFacingMode);
+    });
+
+    // Tombol Ambil Foto & Gabungkan Layer
+    captureBtn.addEventListener('click', () => {
+        const width = video.videoWidth;
+        const height = video.videoHeight;
+
+        if (width === 0 || height === 0) {
+            alert("Kamera belum siap, mohon tunggu sebentar.");
+            return;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+
+        // 1. Gambar video kamera ke canvas
+        ctx.drawImage(video, 0, 0, width, height);
+
+        // 2. Ambil gambar overlay PNG Anda dan timpa di atas video
+        const overlayImgUrl = window.getComputedStyle(document.getElementById('overlayImg')).backgroundImage;
+        const cleanUrl = overlayImgUrl.slice(5, -2).replace(/['"]/g, ""); // Bersihkan format url('...')
+
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = cleanUrl;
+
+        img.onload = () => {
+            // Gambar PNG ditimpa pas di tengah/ukuran penuh sesuai tampilan layar
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Ubah canvas menjadi data URL gambar
+            const dataUrl = canvas.toDataURL('image/png');
+            resultImage.src = dataUrl;
+            downloadBtn.href = dataUrl;
+
+            // Tampilkan modal hasil
+            resultModal.style.display = 'flex';
+        };
+
+        img.onerror = () => {
+            // Fallback jika gambar gagal dimuat, tetap simpan video saja
+            const dataUrl = canvas.toDataURL('image/png');
+            resultImage.src = dataUrl;
+            downloadBtn.href = dataUrl;
+            resultModal.style.display = 'flex';
+        };
+    });
+
+    // Tombol Ulangi Foto
+    retakeBtn.addEventListener('click', () => {
+        resultModal.style.display = 'none';
+    });
+
+    // Tombol Info
+    infoBtn.addEventListener('click', () => {
+        alert("Tips: Pastikan file gambar Anda bernama 'sofa-kamu.png' dan berada di folder yang sama dengan file HTML ini saat di-upload.");
+    });
+</script>
+
+</body>
+</html>
