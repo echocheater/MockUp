@@ -1,24 +1,23 @@
-const CACHE_NAME = 'kamera-gorden-v2';
-const ASSETS = [
+const CACHE_NAME = 'kamera-gorden-v5'; // Naikkan versi ini jika Anda melakukan perubahan besar
+
+// Daftar aset utama yang WAJIB ada saat pertama kali dibuka
+const PRECACHE_ASSETS = [
   '/MockUp/',
   '/MockUp/index.html',
   '/MockUp/manifest.json',
-  '/MockUp/logo.svg',
-  '/MockUp/gorden1.webp',
-  '/MockUp/gorden2.webp',
-  '/MockUp/gorden3.webp'
+  '/MockUp/logo.svg'
 ];
 
-// Tahap Instalasi: Menyimpan file ke dalam Cache
+// Tahap Instalasi: Hanya mengunci aset inti agar proses instalasi instan dan lancar
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
+      return cache.addAll(PRECACHE_ASSETS);
     }).then(() => self.skipWaiting())
   );
 });
 
-// Tahap Aktivasi: Membersihkan cache lama
+// Tahap Aktivasi: Menghapus cache versi lama secara otomatis
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keys) => {
@@ -33,11 +32,26 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// Tahap Fetch: Mengambil file dari Cache agar instan
+// Tahap Fetch: STRATEGI NETWORK-FIRST (Ambil data terbaru dari internet, simpan otomatis ke cache)
 self.addEventListener('fetch', (e) => {
+  // Hanya proses request lokal (bukan ekstensi browser atau analytics luar)
+  if (!e.request.url.startsWith(self.location.origin)) return;
+
   e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
-      return cachedResponse || fetch(e.request);
-    })
+    fetch(e.request)
+      .then((networkResponse) => {
+        // Jika internet tersambung, kloning hasilnya dan simpan/perbarui di dalam cache secara otomatis
+        if (networkResponse.status === 200) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(e.request, responseClone);
+          });
+        }
+        return networkResponse;
+      })
+      .catch(() => {
+        // Jika koneksi internet terputus (offline), ambil cadangan dari cache
+        return caches.match(e.request);
+      })
   );
 });
