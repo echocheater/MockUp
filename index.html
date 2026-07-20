@@ -181,6 +181,13 @@
             justify-content: center;
         }
 
+        /* Tombol flash khusus aktif jika on */
+        .btn-icon.flash-on {
+            background: #ffc107;
+            color: #0b0f19;
+            box-shadow: 0 0 10px #ffc107;
+        }
+
         /* Hasil Preview Foto / Modal */
         #resultModal {
             position: absolute;
@@ -307,11 +314,11 @@
     <!-- Canvas tersembunyi -->
     <canvas id="captureCanvas"></canvas>
 
-    <!-- Panel Tombol Kontrol -->
+    <!-- Panel Tombol Kontrol (Tombol Info diganti Tombol Flash ⚡) -->
     <div class="control-panel">
         <button class="btn btn-icon" id="switchCameraBtn" title="Ganti Kamera">🔄</button>
         <button class="btn btn-capture" id="captureBtn" title="Ambil Foto"></button>
-        <button class="btn btn-icon" id="infoBtn" title="Info">ℹ️</button>
+        <button class="btn btn-icon" id="flashBtn" title="Nyalakan Flash" style="display: none;">⚡</button>
     </div>
 
     <!-- Tampilan Hasil Foto -->
@@ -337,12 +344,12 @@
     const overlayImg = document.getElementById('overlayImg');
     const captureBtn = document.getElementById('captureBtn');
     const switchCameraBtn = document.getElementById('switchCameraBtn');
+    const flashBtn = document.getElementById('flashBtn');
     const canvas = document.getElementById('captureCanvas');
     const resultModal = document.getElementById('resultModal');
     const resultImage = document.getElementById('resultImage');
     const downloadBtn = document.getElementById('downloadBtn');
     const retakeBtn = document.getElementById('retakeBtn');
-    const infoBtn = document.getElementById('infoBtn');
 
     // Element untuk alert custom
     const customAlert = document.getElementById('customAlert');
@@ -351,6 +358,7 @@
 
     let currentFacingMode = 'environment'; 
     let currentStream = null;
+    let isFlashOn = false;
 
     // FUNGSI UNTUK MENAMPILKAN ALERT CUSTOM
     function tampilkanAlert(pesan) {
@@ -370,6 +378,9 @@
     }
 
     async function startCamera(facingMode) {
+        isFlashOn = false;
+        flashBtn.classList.remove('flash-on');
+        
         if (currentStream) {
             currentStream.getTracks().forEach(track => track.stop());
         }
@@ -385,6 +396,20 @@
             };
             currentStream = await navigator.mediaDevices.getUserMedia(constraints);
             video.srcObject = currentStream;
+
+            // Cek ketersediaan fitur Flash (Torch) setelah kamera aktif
+            setTimeout(() => {
+                const track = currentStream.getVideoTracks()[0];
+                const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+                
+                // Tombol flash hanya muncul jika hardware HP mendukung senter/torch
+                if (capabilities.torch) {
+                    flashBtn.style.display = 'flex';
+                } else {
+                    flashBtn.style.display = 'none';
+                }
+            }, 1000);
+
         } catch (err) {
             console.error("Gagal mengakses kamera:", err);
             tampilkanAlert("Tidak dapat mengakses kamera. Pastikan izin kamera telah diberikan di pengaturan HP Anda.");
@@ -396,6 +421,28 @@
     switchCameraBtn.addEventListener('click', () => {
         currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
         startCamera(currentFacingMode);
+    });
+
+    // SISTEM PENGONTROL FLASH (TORCH)
+    flashBtn.addEventListener('click', async () => {
+        if (!currentStream) return;
+        const track = currentStream.getVideoTracks()[0];
+        
+        try {
+            isFlashOn = !isFlashOn;
+            await track.applyConstraints({
+                advanced: [{ torch: isFlashOn }]
+            });
+
+            if (isFlashOn) {
+                flashBtn.classList.add('flash-on');
+            } else {
+                flashBtn.classList.remove('flash-on');
+            }
+        } catch (err) {
+            console.error("Gagal mengontrol flash:", err);
+            tampilkanAlert("Fitur Flash gagal diaktifkan pada browser ini.");
+        }
     });
 
     captureBtn.addEventListener('click', () => {
@@ -438,10 +485,6 @@
 
     retakeBtn.addEventListener('click', () => {
         resultModal.style.display = 'none';
-    });
-
-    infoBtn.addEventListener('click', () => {
-        tampilkanAlert("Tips PWA: Buka menu browser HP Anda lalu ketuk 'Tambahkan ke Layar Utama' atau 'Instal Aplikasi' untuk memasang ikon kamera gorden di beranda.");
     });
 
     // --- REGISTRASI SERVICE WORKER UNTUK GITHUB PAGES ---
