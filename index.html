@@ -199,7 +199,7 @@
 
         #resultImage {
             width: 100%;
-            height: 70vh;
+            height: 65vh;
             border-radius: 12px;
             object-fit: contain;
             box-shadow: 0 8px 25px rgba(0,0,0,0.6);
@@ -207,8 +207,11 @@
 
         .modal-buttons {
             display: flex;
-            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
             margin-top: 20px;
+            width: 100%;
         }
 
         .instruction {
@@ -308,8 +311,9 @@
     <div id="resultModal">
         <img id="resultImage" alt="Hasil Foto Gorden">
         <div class="modal-buttons">
-            <a id="downloadBtn" class="btn" download="gorden-pilihan-warna.png">💾 Simpan Foto</a>
-            <button class="btn" id="retakeBtn" style="background: rgba(255,255,255,0.2); color: white;">❌ Ulangi</button>
+            <a id="downloadBtn" class="btn" download="gorden-pilihan-warna.png" style="padding: 12px 16px; font-size: 14px;">💾 Simpan</a>
+            <button id="shareBtn" class="btn" style="background: linear-gradient(135deg, #25d366, #128c7e); color: white; padding: 12px 16px; font-size: 14px;">🔗 Bagikan</button>
+            <button class="btn" id="retakeBtn" style="background: rgba(255,255,255,0.2); color: white; padding: 12px 16px; font-size: 14px;">❌ Ulangi</button>
         </div>
     </div>
 
@@ -331,6 +335,7 @@
     const resultModal = document.getElementById('resultModal');
     const resultImage = document.getElementById('resultImage');
     const downloadBtn = document.getElementById('downloadBtn');
+    const shareBtn = document.getElementById('shareBtn');
     const retakeBtn = document.getElementById('retakeBtn');
 
     const customAlert = document.getElementById('customAlert');
@@ -340,6 +345,7 @@
     let currentFacingMode = 'environment'; 
     let currentStream = null;
     let isFlashOn = false;
+    let imageBlobData = null; // Menyimpan data biner gambar untuk fitur sharing
 
     function tampilkanAlert(pesan) {
         customAlertText.innerText = pesan;
@@ -356,9 +362,7 @@
         element.classList.add('active');
     }
 
-    // ========================================================
-    // SCANNER OTOMATIS GITHUB REPO: echocheater / MockUp
-    // ========================================================
+    // SCANNER GITHUB REPO OTOMATIS
     async function muatGordenOtomatis() {
         const menuContainer = document.getElementById('gordenMenu');
         const username = 'echocheater'; 
@@ -399,7 +403,6 @@
 
         } catch (error) {
             console.error("Gagal memuat otomatis:", error);
-            // Fallback cadangan aman
             menuContainer.innerHTML = `
                 <button class="thumb-btn active" style="background-image: url('gorden1.webp');" onclick="changeModel('gorden1.webp', this)"></button>
                 <button class="thumb-btn" style="background-image: url('gorden2.webp');" onclick="changeModel('gorden2.webp', this)"></button>
@@ -475,6 +478,7 @@
         }
     });
 
+    // PROSES CAPTURE GAMBAR & KONVERSI KE BLOB FILE
     captureBtn.addEventListener('click', () => {
         const width = video.videoWidth;
         const height = video.videoHeight;
@@ -497,24 +501,62 @@
         img.crossOrigin = "anonymous";
         img.src = cleanUrl;
 
-        img.onload = () => {
-            ctx.drawImage(img, 0, 0, width, height);
+        function prosessTampilanModal() {
             const dataUrl = canvas.toDataURL('image/png');
             resultImage.src = dataUrl;
             downloadBtn.href = dataUrl;
+            
+            // Konversi base64 ke blob riil agar bisa dishare sebagai file gambar utuh
+            canvas.toBlob((blob) => {
+                imageBlobData = blob;
+            }, 'image/png');
+
             resultModal.style.display = 'flex';
+        }
+
+        img.onload = () => {
+            ctx.drawImage(img, 0, 0, width, height);
+            prosessTampilanModal();
         };
 
         img.onerror = () => {
-            const dataUrl = canvas.toDataURL('image/png');
-            resultImage.src = dataUrl;
-            downloadBtn.href = dataUrl;
-            resultModal.style.display = 'flex';
+            prosessTampilanModal();
         };
+    });
+
+    // ========================================================
+    // LOGIKA BAGIKAN KE WHATSAPP, FACEBOOK, DLL (NATIVE SHARE)
+    // ========================================================
+    shareBtn.addEventListener('click', async () => {
+        if (!imageBlobData) {
+            tampilkanAlert("Gambar belum siap untuk dibagikan.");
+            return;
+        }
+
+        // Siapkan file object dari data gambar blob
+        const fileFoto = new File([imageBlobData], "simulasi-gorden.png", { type: "image/png" });
+
+        // Periksa apakah browser HP mendukung fitur bagi file langsung
+        if (navigator.canShare && navigator.canShare({ files: [fileFoto] })) {
+            try {
+                await navigator.share({
+                    files: [fileFoto],
+                    title: 'Simulasi Kain Gorden',
+                    text: 'Halo, ini hasil simulasi warna kain pada model gorden pilihan saya!'
+                });
+                console.log('Berhasil membagikan!');
+            } catch (err) {
+                console.error('Batal atau gagal membagikan:', err);
+            }
+        } else {
+            // Alternatif jika dibuka lewat browser PC / yang tidak mendukung Web Share gambar
+            tampilkanAlert("Browser Anda tidak mendukung share gambar langsung. Silakan gunakan tombol 'Simpan' lalu kirim manual.");
+        }
     });
 
     retakeBtn.addEventListener('click', () => {
         resultModal.style.display = 'none';
+        imageBlobData = null;
     });
 
     if ('serviceWorker' in navigator) {
