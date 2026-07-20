@@ -1,6 +1,6 @@
 const CACHE_NAME = 'kamera-gorden-v1';
 const ASSETS = [
-  './',
+  './MockUp',
   './index.html',
   './manifest.json',
   './logo.svg',
