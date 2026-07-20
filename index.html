@@ -94,6 +94,7 @@
             z-index: 9;
             border-top: 1px solid rgba(255, 255, 255, 0.05);
             scrollbar-width: none;
+            min-height: 80px;
         }
         .model-selector::-webkit-scrollbar {
             display: none;
@@ -293,13 +294,8 @@
         <div class="overlay-image" id="overlayImg"></div>
     </div>
 
-    <!-- Pilihan Model Gorden (Otomatis menggunakan query unik agar terhindar dari cache gambar lama) -->
-    <div class="model-selector">
-        <button class="thumb-btn active" style="background-image: url('gorden1.webp?v=auto');" onclick="changeModel('gorden1.webp?v=auto', this)"></button>
-        <button class="thumb-btn" style="background-image: url('gorden2.webp?v=auto');" onclick="changeModel('gorden2.webp?v=auto', this)"></button>
-        <button class="thumb-btn" style="background-image: url('gorden3.webp?v=auto');" onclick="changeModel('gorden3.webp?v=auto', this)"></button>
-        <button class="thumb-btn" style="background-image: url('gorden4.webp?v=auto');" onclick="changeModel('gorden4.webp?v=auto', this)"></button>
-    </div>
+    <!-- Pilihan Model Gorden Otomatis -->
+    <div class="model-selector" id="gordenMenu"></div>
 
     <canvas id="captureCanvas"></canvas>
 
@@ -360,9 +356,62 @@
         element.classList.add('active');
     }
 
+    // ========================================================
+    // SCANNER OTOMATIS GITHUB REPO: echocheater / MockUp
+    // ========================================================
+    async function muatGordenOtomatis() {
+        const menuContainer = document.getElementById('gordenMenu');
+        const username = 'echocheater'; 
+        const repo = 'MockUp'; 
+        const folderPath = ''; 
+
+        try {
+            const response = await fetch(`https://api.github.com/repos/${username}/${repo}/contents/${folderPath}`);
+            if (!response.ok) throw new Error("Gagal mengambil file github");
+            
+            const files = await response.json();
+            
+            const gordenFiles = files
+                .filter(file => file.name.toLowerCase().includes('gorden') && file.name.endsWith('.webp'))
+                .sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true}));
+
+            if(gordenFiles.length === 0) {
+                menuContainer.innerHTML = `<p style="font-size:12px; padding:10px;">Tidak ada gorden ditemukan.</p>`;
+                return;
+            }
+
+            menuContainer.innerHTML = '';
+            
+            gordenFiles.forEach((file, index) => {
+                const btn = document.createElement('button');
+                btn.className = `thumb-btn ${index === 0 ? 'active' : ''}`;
+                
+                const fileUrl = `${file.name}?t=${new Date().getTime()}`;
+                btn.style.backgroundImage = `url('${fileUrl}')`;
+                btn.onclick = function() { changeModel(fileUrl, this); };
+                
+                menuContainer.appendChild(btn);
+
+                if(index === 0) {
+                    overlayImg.style.backgroundImage = `url('${fileUrl}')`;
+                }
+            });
+
+        } catch (error) {
+            console.error("Gagal memuat otomatis:", error);
+            // Fallback cadangan aman
+            menuContainer.innerHTML = `
+                <button class="thumb-btn active" style="background-image: url('gorden1.webp');" onclick="changeModel('gorden1.webp', this)"></button>
+                <button class="thumb-btn" style="background-image: url('gorden2.webp');" onclick="changeModel('gorden2.webp', this)"></button>
+            `;
+        }
+    }
+
+    muatGordenOtomatis();
+
     async function startCamera(facingMode) {
         isFlashOn = false;
-        flashBtn.classList.remove('flash-on');
+        if(flashBtn) flashBtn.classList.remove('flash-on');
         
         if (currentStream) {
             currentStream.getTracks().forEach(track => track.stop());
@@ -468,19 +517,14 @@
         resultModal.style.display = 'none';
     });
 
-    // --- REGISTRASI PWA & LOGIKA AUTO-UPDATE MANDIRI ---
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('/MockUp/sw.js', { scope: '/MockUp/' })
                 .then(reg => {
-                    console.log('PWA Service Worker aktif!');
-                    
-                    // Deteksi jika di server ada file update baru
                     reg.addEventListener('updatefound', () => {
                         const newWorker = reg.installing;
                         newWorker.addEventListener('statechange', () => {
                             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                // Aplikasi terupdate diam-diam, langsung refresh otomatis ke versi terbaru
                                 window.location.reload();
                             }
                         });
