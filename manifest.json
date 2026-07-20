@@ -1,15 +1,15 @@
 {
-  "short_name": "MockUp Curtain",
+  "short_name": "MockUp Cam",
   "name": "Yeny Gorden MockUp Camera",
   "icons": [
     {
-      "src": "logi.svg",
-      "type": "image/webp",
+      "src": "/MockUp/logo.svg",
+      "type": "image/svg+xml",
       "sizes": "512x512",
       "purpose": "any maskable"
     }
   ],
-  "start_url": "./index.html",
+  "start_url": "/MockUp/index.html",
   "background_color": "#0b0f19",
   "theme_color": "#0b0f19",
   "display": "standalone",
