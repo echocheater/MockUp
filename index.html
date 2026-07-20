@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Kamera Sofa Transparan</title>
+    <title>Kamera Gorden Full Screen</title>
     <style>
         *, *::before, *::after {
             box-sizing: border-box;
@@ -18,7 +18,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
+            min-height: 100dvh;
             overflow: hidden;
         }
 
@@ -26,8 +26,7 @@
             position: relative;
             width: 100%;
             max-width: 480px;
-            height: 100vh;
-            max-height: 850px;
+            height: 100dvh; /* Menggunakan Dynamic Viewport Height agar pas di HP */
             background: #000;
             display: flex;
             flex-direction: column;
@@ -46,32 +45,37 @@
             position: relative;
             flex: 1;
             width: 100%;
+            height: 100%;
             overflow: hidden;
             background: #111;
         }
 
-        /* 1. Video Kamera */
+        /* 1. Video Kamera dipaksa Full Screen (Cover) */
         #webcam {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 50%;
+            left: 50%;
+            min-width: 100%;
+            min-height: 100%;
+            width: auto;
+            height: auto;
+            transform: translate(-50%, -50%);
             object-fit: cover;
+            z-index: 1;
         }
 
-        /* 2. Layer Overlay Gambar PNG Anda */
+        /* 2. Layer Overlay Gambar PNG Gorden Anda dipaksa Full Screen */
         .overlay-image {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-image: url('mockup.png'); /* Ganti dengan nama file gambar Anda */
-            background-size: contain;
+            background-image: url('gorden-kamu.png'); /* Pastikan file gambar Anda bernama ini */
+            background-size: 100% 100%; /* Menarik gambar gorden agar pas memenuhi seluruh layar HP */
             background-repeat: no-repeat;
             background-position: center;
-            pointer-events: none; /* Sentuhan tembus ke bawah jika diperlukan */
+            pointer-events: none;
             z-index: 2;
         }
 
@@ -151,8 +155,8 @@
         }
 
         #resultImage {
-            max-width: 100%;
-            max-height: 70vh;
+            width: 100%;
+            height: 70vh;
             border-radius: 12px;
             object-fit: contain;
             box-shadow: 0 8px 25px rgba(0,0,0,0.6);
@@ -186,14 +190,14 @@
 
 <div class="app-container">
     <div class="instruction">
-        Arahkan kamera ke warna yang diinginkan untuk mengisi bentuk transparan.
+        Arahkan kamera ke warna/objek untuk mengisi bagian gorden yang transparan.
     </div>
 
     <div class="viewport">
         <!-- Elemen Video Kamera -->
         <video id="webcam" autoplay playsinline muted></video>
         
-        <!-- Gambar Overlay PNG Transparan Anda -->
+        <!-- Gambar Overlay PNG Transparan Gorden Anda -->
         <div class="overlay-image" id="overlayImg"></div>
     </div>
 
@@ -209,9 +213,9 @@
 
     <!-- Tampilan Hasil Foto (Modal) -->
     <div id="resultModal">
-        <img id="resultImage" alt="Hasil Foto Sofa">
+        <img id="resultImage" alt="Hasil Foto Gorden">
         <div class="modal-buttons">
-            <a id="downloadBtn" class="btn" download="sofa-warna.png">💾 Simpan Foto</a>
+            <a id="downloadBtn" class="btn" download="gorden-warna.png">💾 Simpan Foto</a>
             <button class="btn" id="retakeBtn" style="background: rgba(255,255,255,0.2); color: white;">❌ Ulangi</button>
         </div>
     </div>
@@ -228,10 +232,9 @@
     const retakeBtn = document.getElementById('retakeBtn');
     const infoBtn = document.getElementById('infoBtn');
 
-    let currentFacingMode = 'environment'; // Default kamera belakang HP
+    let currentFacingMode = 'environment'; 
     let currentStream = null;
 
-    // Fungsi untuk menyalakan kamera
     async function startCamera(facingMode) {
         if (currentStream) {
             currentStream.getTracks().forEach(track => track.stop());
@@ -254,16 +257,16 @@
         }
     }
 
-    // Jalankan kamera saat halaman dimuat
+    // Jalankan kamera awal
     startCamera(currentFacingMode);
 
-    // Tombol Ganti Kamera (Depan / Belakang)
+    // Tukar Kamera Depan/Belakang
     switchCameraBtn.addEventListener('click', () => {
         currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
         startCamera(currentFacingMode);
     });
 
-    // Tombol Ambil Foto & Gabungkan Layer
+    // Proses Pengambilan Gambar (Kamera + Gorden)
     captureBtn.addEventListener('click', () => {
         const width = video.videoWidth;
         const height = video.videoHeight;
@@ -273,6 +276,7 @@
             return;
         }
 
+        // Set ukuran canvas sesuai resolusi kamera asli
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
@@ -280,29 +284,26 @@
         // 1. Gambar video kamera ke canvas
         ctx.drawImage(video, 0, 0, width, height);
 
-        // 2. Ambil gambar overlay PNG Anda dan timpa di atas video
+        // 2. Ambil gambar gorden PNG Anda
         const overlayImgUrl = window.getComputedStyle(document.getElementById('overlayImg')).backgroundImage;
-        const cleanUrl = overlayImgUrl.slice(5, -2).replace(/['"]/g, ""); // Bersihkan format url('...')
+        const cleanUrl = overlayImgUrl.slice(5, -2).replace(/['"]/g, ""); 
 
         const img = new Image();
         img.crossOrigin = "anonymous";
         img.src = cleanUrl;
 
         img.onload = () => {
-            // Gambar PNG ditimpa pas di tengah/ukuran penuh sesuai tampilan layar
+            // Gambar gorden digambar penuh mengikuti resolusi canvas kamera (100% 100%)
             ctx.drawImage(img, 0, 0, width, height);
-
-            // Ubah canvas menjadi data URL gambar
+            
             const dataUrl = canvas.toDataURL('image/png');
             resultImage.src = dataUrl;
             downloadBtn.href = dataUrl;
-
-            // Tampilkan modal hasil
             resultModal.style.display = 'flex';
         };
 
         img.onerror = () => {
-            // Fallback jika gambar gagal dimuat, tetap simpan video saja
+            // Jika gambar gorden gagal termuat, tetap simpan tangkapan kameranya
             const dataUrl = canvas.toDataURL('image/png');
             resultImage.src = dataUrl;
             downloadBtn.href = dataUrl;
@@ -310,14 +311,12 @@
         };
     });
 
-    // Tombol Ulangi Foto
     retakeBtn.addEventListener('click', () => {
         resultModal.style.display = 'none';
     });
 
-    // Tombol Info
     infoBtn.addEventListener('click', () => {
-        alert("Tips: Pastikan file gambar Anda bernama 'sofa-kamu.png' dan berada di folder yang sama dengan file HTML ini saat di-upload.");
+        alert("Tips: Pastikan file gambar Anda bernama 'gorden-kamu.png' dan berada di folder yang sama dengan file HTML ini.");
     });
 </script>
 
