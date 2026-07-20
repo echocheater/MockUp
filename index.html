@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Kamera Gorden PWA Full Screen</title>
     
-    <!-- Perbaikan Jalur Akses Manifest untuk GitHub Pages Sub-folder -->
-    <link rel="manifest" href="/MockUp/manifest.json">
+    <!-- Koneksi ke Manifest PWA -->
+    <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0b0f19">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -181,13 +181,6 @@
             justify-content: center;
         }
 
-        /* Tombol flash khusus aktif jika on */
-        .btn-icon.flash-on {
-            background: #ffc107;
-            color: #0b0f19;
-            box-shadow: 0 0 10px #ffc107;
-        }
-
         /* Hasil Preview Foto / Modal */
         #resultModal {
             position: absolute;
@@ -234,59 +227,6 @@
             width: 90%;
             max-width: 400px;
         }
-
-        /* --- STYLING MODAL ALERT CUSTOM --- */
-        .custom-alert-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.75);
-            backdrop-filter: blur(4px);
-            z-index: 999;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .custom-alert-box {
-            background: #1e293b;
-            border: 2px solid rgba(255, 65, 108, 0.3);
-            border-radius: 16px;
-            padding: 24px;
-            width: 100%;
-            max-width: 320px;
-            text-align: center;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            animation: alertShow 0.2s ease-out;
-        }
-
-        .custom-alert-text {
-            font-size: 15px;
-            line-height: 1.5;
-            margin-bottom: 20px;
-            color: #e2e8f0;
-        }
-
-        .btn-alert-close {
-            background: linear-gradient(135deg, #ff416c, #ff4b2b);
-            color: white;
-            border: none;
-            padding: 10px 24px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            width: 100%;
-            box-shadow: 0 4px 12px rgba(255, 75, 43, 0.3);
-        }
-
-        @keyframes alertShow {
-            from { transform: scale(0.9); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
     </style>
 </head>
 <body>
@@ -306,35 +246,28 @@
 
     <!-- Pilihan Model Gorden -->
     <div class="model-selector">
-        <button class="thumb-btn active" style="background-image: url('gorden1.webp');" onclick="changeModel('gorden1.webp', this)"></button>
+        <button class="thumb-btn" style="background-image: url('gorden1.webp');" onclick="changeModel('gorden1.webp', this)"></button>
         <button class="thumb-btn" style="background-image: url('gorden2.webp');" onclick="changeModel('gorden2.webp', this)"></button>
         <button class="thumb-btn" style="background-image: url('gorden3.webp');" onclick="changeModel('gorden3.webp', this)"></button>
+         <button class="thumb-btn active" style="background-image: url('gorden4.webp');" onclick="changeModel('gorden4.webp', this)"></button>
     </div>
 
     <!-- Canvas tersembunyi -->
     <canvas id="captureCanvas"></canvas>
 
-    <!-- Panel Tombol Kontrol (Tombol Info diganti Tombol Flash ⚡) -->
+    <!-- Panel Tombol Kontrol -->
     <div class="control-panel">
-        <button class="btn btn-icon" id="switchCameraBtn" title="Ganti Kamera">🔄</button>
+        <button class="btn btn-icon" id="switchCameraBtn" title="Ganti Kamera">ðŸ”„</button>
         <button class="btn btn-capture" id="captureBtn" title="Ambil Foto"></button>
-        <button class="btn btn-icon" id="flashBtn" title="Nyalakan Flash" style="display: none;">⚡</button>
+        <button class="btn btn-icon" id="infoBtn" title="Info">â„¹ï¸</button>
     </div>
 
     <!-- Tampilan Hasil Foto -->
     <div id="resultModal">
         <img id="resultImage" alt="Hasil Foto Gorden">
         <div class="modal-buttons">
-            <a id="downloadBtn" class="btn" download="gorden-pilihan-warna.png">💾 Simpan Foto</a>
-            <button class="btn" id="retakeBtn" style="background: rgba(255,255,255,0.2); color: white;">❌ Ulangi</button>
-        </div>
-    </div>
-
-    <!-- STRUKTUR MODAL ALERT CUSTOM -->
-    <div class="custom-alert-overlay" id="customAlert">
-        <div class="custom-alert-box">
-            <div class="custom-alert-text" id="customAlertText">Pesan Peringatan</div>
-            <button class="btn-alert-close" id="customAlertBtn">Oke</button>
+            <a id="downloadBtn" class="btn" download="gorden-pilihan-warna.png">ðŸ’¾ Simpan Foto</a>
+            <button class="btn" id="retakeBtn" style="background: rgba(255,255,255,0.2); color: white;">âŒ Ulangi</button>
         </div>
     </div>
 </div>
@@ -344,32 +277,15 @@
     const overlayImg = document.getElementById('overlayImg');
     const captureBtn = document.getElementById('captureBtn');
     const switchCameraBtn = document.getElementById('switchCameraBtn');
-    const flashBtn = document.getElementById('flashBtn');
     const canvas = document.getElementById('captureCanvas');
     const resultModal = document.getElementById('resultModal');
     const resultImage = document.getElementById('resultImage');
     const downloadBtn = document.getElementById('downloadBtn');
     const retakeBtn = document.getElementById('retakeBtn');
-
-    // Element untuk alert custom
-    const customAlert = document.getElementById('customAlert');
-    const customAlertText = document.getElementById('customAlertText');
-    const customAlertBtn = document.getElementById('customAlertBtn');
+    const infoBtn = document.getElementById('infoBtn');
 
     let currentFacingMode = 'environment'; 
     let currentStream = null;
-    let isFlashOn = false;
-
-    // FUNGSI UNTUK MENAMPILKAN ALERT CUSTOM
-    function tampilkanAlert(pesan) {
-        customAlertText.innerText = pesan;
-        customAlert.style.display = 'flex';
-    }
-
-    // Tutup alert custom
-    customAlertBtn.addEventListener('click', () => {
-        customAlert.style.display = 'none';
-    });
 
     function changeModel(fileName, element) {
         overlayImg.style.backgroundImage = `url('${fileName}')`;
@@ -378,9 +294,6 @@
     }
 
     async function startCamera(facingMode) {
-        isFlashOn = false;
-        flashBtn.classList.remove('flash-on');
-        
         if (currentStream) {
             currentStream.getTracks().forEach(track => track.stop());
         }
@@ -396,23 +309,9 @@
             };
             currentStream = await navigator.mediaDevices.getUserMedia(constraints);
             video.srcObject = currentStream;
-
-            // Cek ketersediaan fitur Flash (Torch) setelah kamera aktif
-            setTimeout(() => {
-                const track = currentStream.getVideoTracks()[0];
-                const capabilities = track.getCapabilities ? track.getCapabilities() : {};
-                
-                // Tombol flash hanya muncul jika hardware HP mendukung senter/torch
-                if (capabilities.torch) {
-                    flashBtn.style.display = 'flex';
-                } else {
-                    flashBtn.style.display = 'none';
-                }
-            }, 1000);
-
         } catch (err) {
             console.error("Gagal mengakses kamera:", err);
-            tampilkanAlert("Tidak dapat mengakses kamera. Pastikan izin kamera telah diberikan di pengaturan HP Anda.");
+            alert("Tidak dapat mengakses kamera. Pastikan izin kamera telah diberikan.");
         }
     }
 
@@ -423,34 +322,12 @@
         startCamera(currentFacingMode);
     });
 
-    // SISTEM PENGONTROL FLASH (TORCH)
-    flashBtn.addEventListener('click', async () => {
-        if (!currentStream) return;
-        const track = currentStream.getVideoTracks()[0];
-        
-        try {
-            isFlashOn = !isFlashOn;
-            await track.applyConstraints({
-                advanced: [{ torch: isFlashOn }]
-            });
-
-            if (isFlashOn) {
-                flashBtn.classList.add('flash-on');
-            } else {
-                flashBtn.classList.remove('flash-on');
-            }
-        } catch (err) {
-            console.error("Gagal mengontrol flash:", err);
-            tampilkanAlert("Fitur Flash gagal diaktifkan pada browser ini.");
-        }
-    });
-
     captureBtn.addEventListener('click', () => {
         const width = video.videoWidth;
         const height = video.videoHeight;
 
         if (width === 0 || height === 0) {
-            tampilkanAlert("Kamera belum siap, mohon tunggu beberapa detik lalu coba lagi.");
+            alert("Kamera belum siap, mohon tunggu sebentar.");
             return;
         }
 
@@ -487,11 +364,15 @@
         resultModal.style.display = 'none';
     });
 
-    // --- REGISTRASI SERVICE WORKER UNTUK GITHUB PAGES ---
+    infoBtn.addEventListener('click', () => {
+        alert("Tips PWA: Gunakan menu browser HP Anda lalu pilih 'Tambahkan ke Layar Utama' untuk menginstal aplikasi ini.");
+    });
+
+    // --- REGISTRASI SERVICE WORKER PWA ---
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/MockUp/sw.js', { scope: '/MockUp/' })
-                .then(reg => console.log('PWA Service Worker aktif di GitHub Pages!', reg))
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('PWA Service Worker aktif!', reg))
                 .catch(err => console.error('PWA Service Worker gagal:', err));
         });
     }
