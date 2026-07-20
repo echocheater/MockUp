@@ -3,6 +3,7 @@ const ASSETS = [
   './',
   './index.html',
   './manifest.json',
+  './logo.svg',
   './gorden1.webp',
   './gorden2.webp',
   './gorden3.webp'
