@@ -1,12 +1,12 @@
-const CACHE_NAME = 'kamera-gorden-v1';
+const CACHE_NAME = 'kamera-gorden-v2';
 const ASSETS = [
-  './MockUp',
-  './index.html',
-  './manifest.json',
-  './logo.svg',
-  './gorden1.webp',
-  './gorden2.webp',
-  './gorden3.webp'
+  '/MockUp/',
+  '/MockUp/index.html',
+  '/MockUp/manifest.json',
+  '/MockUp/logo.svg',
+  '/MockUp/gorden1.webp',
+  '/MockUp/gorden2.webp',
+  '/MockUp/gorden3.webp'
 ];
 
 // Tahap Instalasi: Menyimpan file ke dalam Cache
@@ -18,7 +18,7 @@ self.addEventListener('install', (e) => {
   );
 });
 
-// Tahap Aktivasi: Membersihkan cache lama jika ada pembaruan
+// Tahap Aktivasi: Membersihkan cache lama
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keys) => {
@@ -33,7 +33,7 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// Tahap Fetch: Mengambil file dari Cache agar loading instan
+// Tahap Fetch: Mengambil file dari Cache agar instan
 self.addEventListener('fetch', (e) => {
   e.respondWith(
     caches.match(e.request).then((cachedResponse) => {
