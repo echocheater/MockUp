@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient (Gelap Elegan) -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b0f19" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+    
+    <!-- Lensa & Gorden Gradient (Merah-Orange Modern) -->
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff416c" />
+      <stop offset="100%" stop-color="#ff4b2b" />
+    </linearGradient>
+
+    <!-- Kaca Lensa Efek Glow -->
+    <linearGradient id="lensGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+
+  <!-- 1. Background Kotak Rounded untuk Ikon HP -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
+
+  <!-- 2. Bingkai Luar Kamera (Bentuk Kamera Minimalis) -->
+  <path d="M140 160 C140 145, 155 130, 170 130 L220 130 C230 130, 235 120, 240 110 L250 95 C255 85, 265 80, 275 80 L340 80 C352 80, 362 88, 367 98 L375 114 C380 122, 388 130, 398 130 L440 130 C455 130, 470 145, 470 160 L470 400 C470 415, 455 430, 440 430 L170 430 C155 430, 140 415, 140 400 Z" 
+        fill="none" stroke="url(#primaryGrad)" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+  
+  <!-- Flash Kamera Kecil -->
+  <circle cx="410" cy="180" r="15" fill="url(#primaryGrad)" />
+
+  <!-- 3. Lensa Kamera Utama (Lingkaran Besar) -->
+  <circle cx="305" cy="285" r="110" fill="none" stroke="url(#primaryGrad)" stroke-width="16" />
+
+  <!-- 4. Perpaduan Gorden di Dalam Lensa -->
+  <!-- Siluet Gorden Kiri -->
+  <path d="M220 210 Q240 250, 215 310 Q250 330, 240 375 L198 335 C195 320, 195 250, 220 210 Z" fill="url(#primaryGrad)" />
+  
+  <!-- Siluet Gorden Kanan -->
+  <path d="M390 210 Q370 250, 395 310 Q360 330, 370 375 L412 335 C415 320, 415 250, 390 210 Z" fill="url(#primaryGrad)" />
+  
+  <!-- Batang Gorden Atas di dalam Lensa -->
+  <rect x="215" y="200" width="180" height="10" rx="5" fill="url(#primaryGrad)" />
+
+  <!-- 5. Efek Pantulan Cahaya Kaca Lensa (Aksen Premium) -->
+  <path d="M220 240 A90 90 0 0 1 370 210 A110 110 0 0 0 220 240 Z" fill="url(#lensGlow)" />
+</svg>
