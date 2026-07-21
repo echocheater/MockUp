@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Kamera Gorden PWA Full Screen - Mode Kolase</title>
+    <title>Kamera Gorden PWA - Mode Kolase & Zoom</title>
     
     <link rel="manifest" href="/MockUp/manifest.json">
     <meta name="theme-color" content="#0b0f19">
@@ -81,6 +81,9 @@
             background-position: center;
             pointer-events: none;
             z-index: 2;
+            transform: scale(1);
+            transform-origin: center center;
+            transition: transform 0.05s ease-out;
         }
 
         /* Overlay Indikator Mode Kolase */
@@ -97,6 +100,27 @@
             backdrop-filter: blur(4px);
             display: none;
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        /* Bar Pengatur Zoom / Ukuran Gorden */
+        .zoom-control-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 8px 15px;
+            background: rgba(11, 15, 25, 0.85);
+            backdrop-filter: blur(5px);
+            z-index: 9;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 12px;
+            color: #cbd5e1;
+        }
+
+        .zoom-slider {
+            width: 55%;
+            accent-color: #ff416c;
+            cursor: pointer;
         }
 
         .model-selector {
@@ -311,13 +335,20 @@
 
 <div class="app-container">
     <div class="instruction" id="instructionText">
-        Pilih gorden, arahkan kamera ke kain, lalu ambil foto.
+        Pilih gorden, atur ukuran motif, lalu ambil foto.
     </div>
 
     <div class="viewport">
         <video id="webcam" autoplay playsinline muted></video>
         <div class="overlay-image" id="overlayImg"></div>
         <div class="collage-badge" id="collageBadge">Kolase: 0/2</div>
+    </div>
+
+    <!-- Bar Kontrol Zoom Out / Ukuran Motif Gorden -->
+    <div class="zoom-control-bar">
+        <span>🔍 Ukuran Motif:</span>
+        <input type="range" id="zoomSlider" class="zoom-slider" min="0.4" max="2" step="0.05" value="1">
+        <span id="zoomValue">100%</span>
     </div>
 
     <!-- Pilihan Model Gorden Otomatis -->
@@ -327,7 +358,6 @@
     <canvas id="collageCanvas"></canvas>
 
     <div class="control-panel">
-        <!-- Tombol Pengatur Mode Kolase menggantikan Kamera Depan -->
         <button class="btn btn-icon" id="collageToggleBtn" title="Mode Kolase">🖼️</button>
         <button class="btn btn-capture" id="captureBtn" title="Ambil Foto"></button>
         <button class="btn btn-icon" id="flashBtn" title="Nyalakan Flash" style="display: none;">⚡</button>
@@ -366,6 +396,9 @@
     const instructionText = document.getElementById('instructionText');
     const collageBadge = document.getElementById('collageBadge');
 
+    const zoomSlider = document.getElementById('zoomSlider');
+    const zoomValue = document.getElementById('zoomValue');
+
     const customAlert = document.getElementById('customAlert');
     const customAlertText = document.getElementById('customAlertText');
     const customAlertBtn = document.getElementById('customAlertBtn');
@@ -373,11 +406,12 @@
     let currentStream = null;
     let isFlashOn = false;
     let imageBlobData = null;
+    let currentScale = 1; // Nilai skala zoom saat ini
 
     // VARIABLE FITUR KOLASE
     let isCollageMode = false;
-    let collageTargetCount = 2; // Default 2 Foto Kolase
-    let capturedFrames = []; // Menampung canvas foto sementara
+    let collageTargetCount = 2; 
+    let capturedFrames = []; 
 
     function tampilkanAlert(pesan) {
         customAlertText.innerText = pesan;
@@ -386,6 +420,13 @@
 
     customAlertBtn.addEventListener('click', () => {
         customAlert.style.display = 'none';
+    });
+
+    // Kontrol Slider Zoom Out / In
+    zoomSlider.addEventListener('input', (e) => {
+        currentScale = parseFloat(e.target.value);
+        overlayImg.style.transform = `scale(${currentScale})`;
+        zoomValue.innerText = `${Math.round(currentScale * 100)}%`;
     });
 
     function changeModel(fileName, element) {
@@ -455,7 +496,7 @@
         try {
             const constraints = {
                 video: {
-                    facingMode: 'environment', // Selalu menggunakan kamera belakang
+                    facingMode: 'environment', // Kamera belakang
                     width: { ideal: 1280 },
                     height: { ideal: 720 }
                 },
@@ -505,37 +546,33 @@
         }
     });
 
-    // ========================================================
-    // LOGIKA MODE KOLASE (SILIH BERGANTI WARNA / MODEL)
-    // ========================================================
+    // LOGIKA MODE KOLASE
     collageToggleBtn.addEventListener('click', () => {
         if (!isCollageMode) {
             isCollageMode = true;
-            collageTargetCount = 2; // Set default 2 foto
+            collageTargetCount = 2; 
             capturedFrames = [];
             collageToggleBtn.classList.add('active');
             collageBadge.style.display = 'block';
             updateCollageUI();
         } else if (collageTargetCount === 2) {
-            collageTargetCount = 4; // Switch ke 4 foto jika diklik lagi
+            collageTargetCount = 4; 
             capturedFrames = [];
             updateCollageUI();
         } else {
-            // Matikan mode kolase
             isCollageMode = false;
             capturedFrames = [];
             collageToggleBtn.classList.remove('active');
             collageBadge.style.display = 'none';
-            instructionText.innerText = "Pilih gorden, arahkan kamera ke kain, lalu ambil foto.";
+            instructionText.innerText = "Pilih gorden, atur ukuran motif, lalu ambil foto.";
         }
     });
 
     function updateCollageUI() {
         collageBadge.innerText = `Kolase: ${capturedFrames.length}/${collageTargetCount}`;
-        instructionText.innerText = `Ambil Foto Ke-${capturedFrames.length + 1} untuk Kolase (${collageTargetCount} Gambar). Ubah warna/model jika perlu.`;
+        instructionText.innerText = `Ambil Foto Ke-${capturedFrames.length + 1} (${collageTargetCount} Gambar). Sesuaikan zoom jika perlu.`;
     }
 
-    // FUNGSI MENGGABUNGKAN GAMBAR KE SATU CANVAS (KOLASE)
     function renderCollage() {
         const singleW = capturedFrames[0].width;
         const singleH = capturedFrames[0].height;
@@ -553,7 +590,6 @@
             ctx.drawImage(capturedFrames[0], 0, 0);
             ctx.drawImage(capturedFrames[1], singleW, 0);
 
-            // Garis Pembatas Tengah
             ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 8;
             ctx.beginPath();
@@ -573,14 +609,11 @@
             ctx.drawImage(capturedFrames[2], 0, singleH);
             ctx.drawImage(capturedFrames[3], singleW, singleH);
 
-            // Garis Pembatas Silang
             ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 8;
             ctx.beginPath();
-            // Garis Vertikal
             ctx.moveTo(singleW, 0);
             ctx.lineTo(singleW, totalH);
-            // Garis Horizontal
             ctx.moveTo(0, singleH);
             ctx.lineTo(totalW, singleH);
             ctx.stroke();
@@ -597,7 +630,6 @@
         resultModal.style.display = 'flex';
     }
 
-    // AMBIL FOTO SINGLE / KOLASE
     captureBtn.addEventListener('click', () => {
         const width = video.videoWidth;
         const height = video.videoHeight;
@@ -607,7 +639,6 @@
             return;
         }
 
-        // Buat canvas sementara per frame
         const frameCanvas = document.createElement('canvas');
         frameCanvas.width = width;
         frameCanvas.height = height;
@@ -623,7 +654,17 @@
         img.src = cleanUrl;
 
         img.onload = () => {
-            ctx.drawImage(img, 0, 0, width, height);
+            ctx.save();
+            // Terapkan skala zoom saat menggambar overlay gorden ke dalam hasil foto
+            if (currentScale !== 1) {
+                ctx.translate(width / 2, height / 2);
+                ctx.scale(currentScale, currentScale);
+                ctx.drawImage(img, -width / 2, -height / 2, width, height);
+            } else {
+                ctx.drawImage(img, 0, 0, width, height);
+            }
+            ctx.restore();
+            
             prosesHasilFrame(frameCanvas);
         };
 
@@ -634,7 +675,6 @@
 
     function prosesHasilFrame(frameCanvas) {
         if (!isCollageMode) {
-            // Mode Tunggal Biasa
             const dataUrl = frameCanvas.toDataURL('image/png');
             resultImage.src = dataUrl;
             downloadBtn.href = dataUrl;
@@ -645,12 +685,10 @@
 
             resultModal.style.display = 'flex';
         } else {
-            // Mode Kolase Multiframe
             capturedFrames.push(frameCanvas);
             updateCollageUI();
 
             if (capturedFrames.length < collageTargetCount) {
-                // Beri efek kilatan saat foto berhasil diambil
                 const flashEffect = document.createElement('div');
                 flashEffect.style.position = 'absolute';
                 flashEffect.style.top = '0';
@@ -662,37 +700,32 @@
                 document.querySelector('.viewport').appendChild(flashEffect);
                 
                 setTimeout(() => flashEffect.remove(), 150);
-
             } else {
-                // Semua frame terkumpul, gabungkan menjadi Kolase
                 renderCollage();
             }
         }
     }
 
-    // ========================================================
-    // LOGIKA BAGIKAN KE WHATSAPP, FACEBOOK, DLL (NATIVE SHARE)
-    // ========================================================
     shareBtn.addEventListener('click', async () => {
         if (!imageBlobData) {
             tampilkanAlert("Gambar belum siap untuk dibagikan.");
             return;
         }
 
-        const fileFoto = new File([imageBlobData], "simulasi-gorden-kolase.png", { type: "image/png" });
+        const fileFoto = new File([imageBlobData], "simulasi-gorden.png", { type: "image/png" });
 
         if (navigator.canShare && navigator.canShare({ files: [fileFoto] })) {
             try {
                 await navigator.share({
                     files: [fileFoto],
                     title: 'Simulasi Kain Gorden',
-                    text: 'Halo, ini hasil simulasi variasi warna/motif kain gorden pilihan saya!'
+                    text: 'Halo, ini hasil simulasi variasi motif gorden pilihan saya!'
                 });
             } catch (err) {
                 console.error('Batal atau gagal membagikan:', err);
             }
         } else {
-            tampilkanAlert("Browser Anda tidak mendukung share gambar langsung. Silakan gunakan tombol 'Simpan' lalu kirim manual.");
+            tampilkanAlert("Browser Anda tidak mendukung share gambar langsung. Silakan gunakan tombol 'Simpan'.");
         }
     });
 
@@ -708,16 +741,6 @@
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('/MockUp/sw.js', { scope: '/MockUp/' })
-                .then(reg => {
-                    reg.addEventListener('updatefound', () => {
-                        const newWorker = reg.installing;
-                        newWorker.addEventListener('statechange', () => {
-                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                window.location.reload();
-                            }
-                        });
-                    });
-                })
                 .catch(err => console.error('PWA Service Worker gagal:', err));
         });
     }
