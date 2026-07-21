@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Kamera Gorden PWA - Zoom Motif & Kolase</title>
+    <title>Kamera Gorden PWA - Zoom Motif Continuous</title>
     
     <link rel="manifest" href="/MockUp/manifest.json">
     <meta name="theme-color" content="#0b0f19">
@@ -76,15 +76,14 @@
             width: 100%;
             height: 100%;
             background-image: url('gorden1.webp'); 
-            /* Menggunakan no-repeat agar objek tunggal (seperti huruf A) bisa diperbesar/kecil posisinya */
+            /* REPEAT agar motif diulang memenuhi 100% layar tanpa menyisakan ruang kosong */
+            background-repeat: repeat; 
             background-size: 100% 100%; 
-            background-repeat: no-repeat;
-            background-position: center;
+            background-position: center center;
             pointer-events: none;
             z-index: 2;
         }
 
-        /* Overlay Indikator Mode Kolase */
         .collage-badge {
             position: absolute;
             top: 60px;
@@ -100,7 +99,7 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
 
-        /* Bar Pengatur Zoom Ukuran Motif */
+        /* Bar Pengatur Zoom Motif */
         .zoom-control-bar {
             display: flex;
             align-items: center;
@@ -341,10 +340,10 @@
         <div class="collage-badge" id="collageBadge">Kolase: 0/2</div>
     </div>
 
-    <!-- Bar Pengatur Ukuran Motif/Huruf -->
+    <!-- Bar Pengatur Skala Motif -->
     <div class="zoom-control-bar">
         <span>🔍 Ukuran Motif:</span>
-        <input type="range" id="zoomSlider" class="zoom-slider" min="20" max="300" step="5" value="100">
+        <input type="range" id="zoomSlider" class="zoom-slider" min="20" max="200" step="5" value="100">
         <span id="zoomValue">100%</span>
     </div>
 
@@ -402,7 +401,7 @@
     let currentStream = null;
     let isFlashOn = false;
     let imageBlobData = null;
-    let motifScalePercent = 100; // Persentase ukuran motif/huruf tunggal
+    let motifPercent = 100;
 
     let isCollageMode = false;
     let collageTargetCount = 2; 
@@ -417,12 +416,11 @@
         customAlert.style.display = 'none';
     });
 
-    // Slider untuk mengatur ukuran visual motif/huruf di dalam area transparan
+    // Mengubah background-size dengan repeat agar selalu full screen
     zoomSlider.addEventListener('input', (e) => {
-        motifScalePercent = parseInt(e.target.value);
-        // Mengatur background-size secara proporsional (memperbesar/mengecilkan objek gambar tunggal)
-        overlayImg.style.backgroundSize = `${motifScalePercent}% ${motifScalePercent}%`;
-        zoomValue.innerText = `${motifScalePercent}%`;
+        motifPercent = parseInt(e.target.value);
+        overlayImg.style.backgroundSize = `${motifPercent}% ${motifPercent}%`;
+        zoomValue.innerText = `${motifPercent}%`;
     });
 
     function changeModel(fileName, element) {
@@ -638,6 +636,7 @@
         frameCanvas.height = height;
         const ctx = frameCanvas.getContext('2d');
 
+        // 1. Gambar kamera
         ctx.drawImage(video, 0, 0, width, height);
 
         const overlayImgUrl = window.getComputedStyle(overlayImg).backgroundImage;
@@ -648,13 +647,20 @@
         img.src = cleanUrl;
 
         img.onload = () => {
-            // Menggambar motif tunggal (seperti huruf A) dengan ukuran skala persentase ke dalam hasil foto
-            const drawW = (width * motifScalePercent) / 100;
-            const drawH = (height * motifScalePercent) / 100;
-            const drawX = (width - drawW) / 2;
-            const drawY = (height - drawH) / 2;
+            // 2. Buat pattern berulang (tiling) sesuai skala motif ke seluruh area canvas
+            const patternW = (width * motifPercent) / 100;
+            const patternH = (height * motifPercent) / 100;
 
-            ctx.drawImage(img, drawX, drawY, drawW, drawH);
+            const patternCanvas = document.createElement('canvas');
+            patternCanvas.width = patternW;
+            patternCanvas.height = patternH;
+            const pCtx = patternCanvas.getContext('2d');
+            pCtx.drawImage(img, 0, 0, patternW, patternH);
+
+            const pattern = ctx.createPattern(patternCanvas, 'repeat');
+            ctx.fillStyle = pattern;
+            ctx.fillRect(0, 0, width, height);
+
             prosesHasilFrame(frameCanvas);
         };
 
