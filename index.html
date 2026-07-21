@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Kamera Gorden PWA - Mode Kolase & Zoom</title>
+    <title>Kamera Gorden PWA - Zoom Motif & Kolase</title>
     
     <link rel="manifest" href="/MockUp/manifest.json">
     <meta name="theme-color" content="#0b0f19">
@@ -76,14 +76,12 @@
             width: 100%;
             height: 100%;
             background-image: url('gorden1.webp'); 
-            background-size: 100% 100%;
+            /* Menggunakan no-repeat agar objek tunggal (seperti huruf A) bisa diperbesar/kecil posisinya */
+            background-size: 100% 100%; 
             background-repeat: no-repeat;
             background-position: center;
             pointer-events: none;
             z-index: 2;
-            transform: scale(1);
-            transform-origin: center center;
-            transition: transform 0.05s ease-out;
         }
 
         /* Overlay Indikator Mode Kolase */
@@ -102,7 +100,7 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
 
-        /* Bar Pengatur Zoom / Ukuran Gorden */
+        /* Bar Pengatur Zoom Ukuran Motif */
         .zoom-control-bar {
             display: flex;
             align-items: center;
@@ -277,7 +275,6 @@
             max-width: 400px;
         }
 
-        /* MODAL ALERT CUSTOM */
         .custom-alert-overlay {
             position: absolute;
             top: 0;
@@ -344,14 +341,13 @@
         <div class="collage-badge" id="collageBadge">Kolase: 0/2</div>
     </div>
 
-    <!-- Bar Kontrol Zoom Out / Ukuran Motif Gorden -->
+    <!-- Bar Pengatur Ukuran Motif/Huruf -->
     <div class="zoom-control-bar">
         <span>🔍 Ukuran Motif:</span>
-        <input type="range" id="zoomSlider" class="zoom-slider" min="0.4" max="2" step="0.05" value="1">
+        <input type="range" id="zoomSlider" class="zoom-slider" min="20" max="300" step="5" value="100">
         <span id="zoomValue">100%</span>
     </div>
 
-    <!-- Pilihan Model Gorden Otomatis -->
     <div class="model-selector" id="gordenMenu"></div>
 
     <canvas id="captureCanvas"></canvas>
@@ -406,9 +402,8 @@
     let currentStream = null;
     let isFlashOn = false;
     let imageBlobData = null;
-    let currentScale = 1; // Nilai skala zoom saat ini
+    let motifScalePercent = 100; // Persentase ukuran motif/huruf tunggal
 
-    // VARIABLE FITUR KOLASE
     let isCollageMode = false;
     let collageTargetCount = 2; 
     let capturedFrames = []; 
@@ -422,11 +417,12 @@
         customAlert.style.display = 'none';
     });
 
-    // Kontrol Slider Zoom Out / In
+    // Slider untuk mengatur ukuran visual motif/huruf di dalam area transparan
     zoomSlider.addEventListener('input', (e) => {
-        currentScale = parseFloat(e.target.value);
-        overlayImg.style.transform = `scale(${currentScale})`;
-        zoomValue.innerText = `${Math.round(currentScale * 100)}%`;
+        motifScalePercent = parseInt(e.target.value);
+        // Mengatur background-size secara proporsional (memperbesar/mengecilkan objek gambar tunggal)
+        overlayImg.style.backgroundSize = `${motifScalePercent}% ${motifScalePercent}%`;
+        zoomValue.innerText = `${motifScalePercent}%`;
     });
 
     function changeModel(fileName, element) {
@@ -435,7 +431,6 @@
         element.classList.add('active');
     }
 
-    // SCANNER GITHUB REPO OTOMATIS
     async function muatGordenOtomatis() {
         const menuContainer = document.getElementById('gordenMenu');
         const username = 'echocheater'; 
@@ -496,7 +491,7 @@
         try {
             const constraints = {
                 video: {
-                    facingMode: 'environment', // Kamera belakang
+                    facingMode: 'environment',
                     width: { ideal: 1280 },
                     height: { ideal: 720 }
                 },
@@ -546,7 +541,6 @@
         }
     });
 
-    // LOGIKA MODE KOLASE
     collageToggleBtn.addEventListener('click', () => {
         if (!isCollageMode) {
             isCollageMode = true;
@@ -570,7 +564,7 @@
 
     function updateCollageUI() {
         collageBadge.innerText = `Kolase: ${capturedFrames.length}/${collageTargetCount}`;
-        instructionText.innerText = `Ambil Foto Ke-${capturedFrames.length + 1} (${collageTargetCount} Gambar). Sesuaikan zoom jika perlu.`;
+        instructionText.innerText = `Ambil Foto Ke-${capturedFrames.length + 1} (${collageTargetCount} Gambar). Sesuaikan ukuran motif jika perlu.`;
     }
 
     function renderCollage() {
@@ -654,17 +648,13 @@
         img.src = cleanUrl;
 
         img.onload = () => {
-            ctx.save();
-            // Terapkan skala zoom saat menggambar overlay gorden ke dalam hasil foto
-            if (currentScale !== 1) {
-                ctx.translate(width / 2, height / 2);
-                ctx.scale(currentScale, currentScale);
-                ctx.drawImage(img, -width / 2, -height / 2, width, height);
-            } else {
-                ctx.drawImage(img, 0, 0, width, height);
-            }
-            ctx.restore();
-            
+            // Menggambar motif tunggal (seperti huruf A) dengan ukuran skala persentase ke dalam hasil foto
+            const drawW = (width * motifScalePercent) / 100;
+            const drawH = (height * motifScalePercent) / 100;
+            const drawX = (width - drawW) / 2;
+            const drawY = (height - drawH) / 2;
+
+            ctx.drawImage(img, drawX, drawY, drawW, drawH);
             prosesHasilFrame(frameCanvas);
         };
 
