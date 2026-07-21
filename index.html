@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Kamera Gorden PWA - Fullscreen Frame & Object Zoom</title>
+    <title>Kamera Gorden PWA Full Screen</title>
     
     <link rel="manifest" href="/MockUp/manifest.json">
     <meta name="theme-color" content="#0b0f19">
@@ -69,8 +69,6 @@
             z-index: 1;
         }
 
-        /* Bingkai transparan/container UTUH full screen (100% x 100%), 
-           tapi objek gambar di dalamnya yang melakukan zoom via background-size */
         .overlay-image {
             position: absolute;
             top: 0;
@@ -78,46 +76,11 @@
             width: 100%;
             height: 100%;
             background-image: url('gorden1.webp'); 
-            background-repeat: no-repeat; 
-            background-position: center center;
-            background-size: 80% auto; /* Objek gorden diatur ukurannya di sini */
+            background-size: 100% 100%;
+            background-repeat: no-repeat;
+            background-position: center;
             pointer-events: none;
             z-index: 2;
-        }
-
-        .collage-badge {
-            position: absolute;
-            top: 60px;
-            right: 15px;
-            background: rgba(255, 65, 108, 0.85);
-            padding: 6px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: bold;
-            z-index: 10;
-            backdrop-filter: blur(4px);
-            display: none;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        }
-
-        .zoom-control-bar {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            padding: 8px 15px;
-            background: rgba(11, 15, 25, 0.85);
-            backdrop-filter: blur(5px);
-            z-index: 9;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-            font-size: 12px;
-            color: #cbd5e1;
-        }
-
-        .zoom-slider {
-            width: 55%;
-            accent-color: #ff416c;
-            cursor: pointer;
         }
 
         .model-selector {
@@ -157,7 +120,7 @@
             transform: scale(1.05);
         }
 
-        #captureCanvas, #collageCanvas {
+        #captureCanvas {
             display: none;
         }
 
@@ -184,7 +147,7 @@
             align-items: center;
             gap: 8px;
             box-shadow: 0 4px 15px rgba(255,255,255,0.2);
-            transition: transform 0.1s ease, background 0.2s ease;
+            transition: transform 0.1s ease;
         }
 
         .btn:active {
@@ -211,12 +174,6 @@
             height: 45px;
             padding: 0;
             justify-content: center;
-            font-size: 18px;
-        }
-
-        .btn-icon.active {
-            background: #ff416c;
-            box-shadow: 0 0 12px rgba(255, 65, 108, 0.6);
         }
 
         .btn-icon.flash-on {
@@ -274,6 +231,7 @@
             max-width: 400px;
         }
 
+        /* MODAL ALERT CUSTOM */
         .custom-alert-overlay {
             position: absolute;
             top: 0;
@@ -330,30 +288,22 @@
 <body>
 
 <div class="app-container">
-    <div class="instruction" id="instructionText">
-        Pilih gorden, atur ukuran objek, lalu ambil foto.
+    <div class="instruction">
+        Pilih model gorden, lalu arahkan kamera untuk mengisi warnanya.
     </div>
 
     <div class="viewport">
         <video id="webcam" autoplay playsinline muted></video>
         <div class="overlay-image" id="overlayImg"></div>
-        <div class="collage-badge" id="collageBadge">Kolase: 0/2</div>
     </div>
 
-    <!-- Bar Pengatur Zoom Objek Gorden -->
-    <div class="zoom-control-bar">
-        <span>🔍 Zoom Objek:</span>
-        <input type="range" id="zoomSlider" class="zoom-slider" min="30" max="200" step="2" value="80">
-        <span id="zoomValue">80%</span>
-    </div>
-
+    <!-- Pilihan Model Gorden Otomatis -->
     <div class="model-selector" id="gordenMenu"></div>
 
     <canvas id="captureCanvas"></canvas>
-    <canvas id="collageCanvas"></canvas>
 
     <div class="control-panel">
-        <button class="btn btn-icon" id="collageToggleBtn" title="Mode Kolase">🖼️</button>
+        <button class="btn btn-icon" id="switchCameraBtn" title="Ganti Kamera">🔄</button>
         <button class="btn btn-capture" id="captureBtn" title="Ambil Foto"></button>
         <button class="btn btn-icon" id="flashBtn" title="Nyalakan Flash" style="display: none;">⚡</button>
     </div>
@@ -379,33 +329,23 @@
     const video = document.getElementById('webcam');
     const overlayImg = document.getElementById('overlayImg');
     const captureBtn = document.getElementById('captureBtn');
-    const collageToggleBtn = document.getElementById('collageToggleBtn');
+    const switchCameraBtn = document.getElementById('switchCameraBtn');
     const flashBtn = document.getElementById('flashBtn');
     const canvas = document.getElementById('captureCanvas');
-    const collageCanvas = document.getElementById('collageCanvas');
     const resultModal = document.getElementById('resultModal');
     const resultImage = document.getElementById('resultImage');
     const downloadBtn = document.getElementById('downloadBtn');
     const shareBtn = document.getElementById('shareBtn');
     const retakeBtn = document.getElementById('retakeBtn');
-    const instructionText = document.getElementById('instructionText');
-    const collageBadge = document.getElementById('collageBadge');
-
-    const zoomSlider = document.getElementById('zoomSlider');
-    const zoomValue = document.getElementById('zoomValue');
 
     const customAlert = document.getElementById('customAlert');
     const customAlertText = document.getElementById('customAlertText');
     const customAlertBtn = document.getElementById('customAlertBtn');
 
+    let currentFacingMode = 'environment'; 
     let currentStream = null;
     let isFlashOn = false;
-    let imageBlobData = null;
-    let scalePercent = 80;
-
-    let isCollageMode = false;
-    let collageTargetCount = 2; 
-    let capturedFrames = []; 
+    let imageBlobData = null; // Menyimpan data biner gambar untuk fitur sharing
 
     function tampilkanAlert(pesan) {
         customAlertText.innerText = pesan;
@@ -416,19 +356,13 @@
         customAlert.style.display = 'none';
     });
 
-    // Mengatur background-size secara dinamis agar bingkai tetap full screen, tapi objek di dalamnya yang zoom
-    zoomSlider.addEventListener('input', (e) => {
-        scalePercent = parseInt(e.target.value);
-        overlayImg.style.backgroundSize = `${scalePercent}% auto`;
-        zoomValue.innerText = `${scalePercent}%`;
-    });
-
     function changeModel(fileName, element) {
         overlayImg.style.backgroundImage = `url('${fileName}')`;
         document.querySelectorAll('.thumb-btn').forEach(btn => btn.classList.remove('active'));
         element.classList.add('active');
     }
 
+    // SCANNER GITHUB REPO OTOMATIS
     async function muatGordenOtomatis() {
         const menuContainer = document.getElementById('gordenMenu');
         const username = 'echocheater'; 
@@ -478,7 +412,7 @@
 
     muatGordenOtomatis();
 
-    async function startCamera() {
+    async function startCamera(facingMode) {
         isFlashOn = false;
         if(flashBtn) flashBtn.classList.remove('flash-on');
         
@@ -489,7 +423,7 @@
         try {
             const constraints = {
                 video: {
-                    facingMode: 'environment',
+                    facingMode: facingMode,
                     width: { ideal: 1280 },
                     height: { ideal: 720 }
                 },
@@ -512,11 +446,16 @@
 
         } catch (err) {
             console.error("Gagal mengakses kamera:", err);
-            tampilkanAlert("Tidak dapat mengakses kamera belakang. Pastikan izin kamera aktif.");
+            tampilkanAlert("Tidak dapat mengakses kamera. Pastikan izin kamera aktif.");
         }
     }
 
-    startCamera();
+    startCamera(currentFacingMode);
+
+    switchCameraBtn.addEventListener('click', () => {
+        currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+        startCamera(currentFacingMode);
+    });
 
     flashBtn.addEventListener('click', async () => {
         if (!currentStream) return;
@@ -539,89 +478,7 @@
         }
     });
 
-    collageToggleBtn.addEventListener('click', () => {
-        if (!isCollageMode) {
-            isCollageMode = true;
-            collageTargetCount = 2; 
-            capturedFrames = [];
-            collageToggleBtn.classList.add('active');
-            collageBadge.style.display = 'block';
-            updateCollageUI();
-        } else if (collageTargetCount === 2) {
-            collageTargetCount = 4; 
-            capturedFrames = [];
-            updateCollageUI();
-        } else {
-            isCollageMode = false;
-            capturedFrames = [];
-            collageToggleBtn.classList.remove('active');
-            collageBadge.style.display = 'none';
-            instructionText.innerText = "Pilih gorden, atur ukuran objek, lalu ambil foto.";
-        }
-    });
-
-    function updateCollageUI() {
-        collageBadge.innerText = `Kolase: ${capturedFrames.length}/${collageTargetCount}`;
-        instructionText.innerText = `Ambil Foto Ke-${capturedFrames.length + 1} (${collageTargetCount} Gambar). Sesuaikan zoom jika perlu.`;
-    }
-
-    function renderCollage() {
-        const singleW = capturedFrames[0].width;
-        const singleH = capturedFrames[0].height;
-
-        let totalW = singleW;
-        let totalH = singleH;
-
-        if (collageTargetCount === 2) {
-            totalW = singleW * 2;
-            totalH = singleH;
-            collageCanvas.width = totalW;
-            collageCanvas.height = totalH;
-
-            const ctx = collageCanvas.getContext('2d');
-            ctx.drawImage(capturedFrames[0], 0, 0);
-            ctx.drawImage(capturedFrames[1], singleW, 0);
-
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 8;
-            ctx.beginPath();
-            ctx.moveTo(singleW, 0);
-            ctx.lineTo(singleW, totalH);
-            ctx.stroke();
-
-        } else if (collageTargetCount === 4) {
-            totalW = singleW * 2;
-            totalH = singleH * 2;
-            collageCanvas.width = totalW;
-            collageCanvas.height = totalH;
-
-            const ctx = collageCanvas.getContext('2d');
-            ctx.drawImage(capturedFrames[0], 0, 0);
-            ctx.drawImage(capturedFrames[1], singleW, 0);
-            ctx.drawImage(capturedFrames[2], 0, singleH);
-            ctx.drawImage(capturedFrames[3], singleW, singleH);
-
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 8;
-            ctx.beginPath();
-            ctx.moveTo(singleW, 0);
-            ctx.lineTo(singleW, totalH);
-            ctx.moveTo(0, singleH);
-            ctx.lineTo(totalW, singleH);
-            ctx.stroke();
-        }
-
-        const dataUrl = collageCanvas.toDataURL('image/png');
-        resultImage.src = dataUrl;
-        downloadBtn.href = dataUrl;
-        
-        collageCanvas.toBlob((blob) => {
-            imageBlobData = blob;
-        }, 'image/png');
-
-        resultModal.style.display = 'flex';
-    }
-
+    // PROSES CAPTURE GAMBAR & KONVERSI KE BLOB FILE
     captureBtn.addEventListener('click', () => {
         const width = video.videoWidth;
         const height = video.videoHeight;
@@ -631,12 +488,10 @@
             return;
         }
 
-        const frameCanvas = document.createElement('canvas');
-        frameCanvas.width = width;
-        frameCanvas.height = height;
-        const ctx = frameCanvas.getContext('2d');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
 
-        // 1. Gambar latar belakang kamera
         ctx.drawImage(video, 0, 0, width, height);
 
         const overlayImgUrl = window.getComputedStyle(overlayImg).backgroundImage;
@@ -646,91 +501,77 @@
         img.crossOrigin = "anonymous";
         img.src = cleanUrl;
 
-        img.onload = () => {
-            // 2. Kalkulasi ukuran objek gorden sesuai persentase background-size di layar
-            const imgAspect = img.naturalWidth / img.naturalHeight;
-            const drawW = width * (scalePercent / 100);
-            const drawH = drawW / imgAspect;
-            const drawX = (width - drawW) / 2;
-            const drawY = (height - drawH) / 2;
-
-            ctx.drawImage(img, drawX, drawY, drawW, drawH);
-            prosesHasilFrame(frameCanvas);
-        };
-
-        img.onerror = () => {
-            prosesHasilFrame(frameCanvas);
-        };
-    });
-
-    function prosesHasilFrame(frameCanvas) {
-        if (!isCollageMode) {
-            const dataUrl = frameCanvas.toDataURL('image/png');
+        function prosessTampilanModal() {
+            const dataUrl = canvas.toDataURL('image/png');
             resultImage.src = dataUrl;
             downloadBtn.href = dataUrl;
-
-            frameCanvas.toBlob((blob) => {
+            
+            // Konversi base64 ke blob riil agar bisa dishare sebagai file gambar utuh
+            canvas.toBlob((blob) => {
                 imageBlobData = blob;
             }, 'image/png');
 
             resultModal.style.display = 'flex';
-        } else {
-            capturedFrames.push(frameCanvas);
-            updateCollageUI();
-
-            if (capturedFrames.length < collageTargetCount) {
-                const flashEffect = document.createElement('div');
-                flashEffect.style.position = 'absolute';
-                flashEffect.style.top = '0';
-                flashEffect.style.left = '0';
-                flashEffect.style.width = '100%';
-                flashEffect.style.height = '100%';
-                flashEffect.style.background = '#ffffff';
-                flashEffect.style.zIndex = '50';
-                document.querySelector('.viewport').appendChild(flashEffect);
-                
-                setTimeout(() => flashEffect.remove(), 150);
-            } else {
-                renderCollage();
-            }
         }
-    }
 
+        img.onload = () => {
+            ctx.drawImage(img, 0, 0, width, height);
+            prosessTampilanModal();
+        };
+
+        img.onerror = () => {
+            prosessTampilanModal();
+        };
+    });
+
+    // ========================================================
+    // LOGIKA BAGIKAN KE WHATSAPP, FACEBOOK, DLL (NATIVE SHARE)
+    // ========================================================
     shareBtn.addEventListener('click', async () => {
         if (!imageBlobData) {
             tampilkanAlert("Gambar belum siap untuk dibagikan.");
             return;
         }
 
+        // Siapkan file object dari data gambar blob
         const fileFoto = new File([imageBlobData], "simulasi-gorden.png", { type: "image/png" });
 
+        // Periksa apakah browser HP mendukung fitur bagi file langsung
         if (navigator.canShare && navigator.canShare({ files: [fileFoto] })) {
             try {
                 await navigator.share({
                     files: [fileFoto],
                     title: 'Simulasi Kain Gorden',
-                    text: 'Halo, ini hasil simulasi variasi gorden pilihan saya!'
+                    text: 'Halo, ini hasil simulasi warna kain pada model gorden pilihan saya!'
                 });
+                console.log('Berhasil membagikan!');
             } catch (err) {
                 console.error('Batal atau gagal membagikan:', err);
             }
         } else {
-            tampilkanAlert("Browser Anda tidak mendukung share gambar langsung. Silakan gunakan tombol 'Simpan'.");
+            // Alternatif jika dibuka lewat browser PC / yang tidak mendukung Web Share gambar
+            tampilkanAlert("Browser Anda tidak mendukung share gambar langsung. Silakan gunakan tombol 'Simpan' lalu kirim manual.");
         }
     });
 
     retakeBtn.addEventListener('click', () => {
         resultModal.style.display = 'none';
         imageBlobData = null;
-        if (isCollageMode) {
-            capturedFrames = [];
-            updateCollageUI();
-        }
     });
 
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('/MockUp/sw.js', { scope: '/MockUp/' })
+                .then(reg => {
+                    reg.addEventListener('updatefound', () => {
+                        const newWorker = reg.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                window.location.reload();
+                            }
+                        });
+                    });
+                })
                 .catch(err => console.error('PWA Service Worker gagal:', err));
         });
     }
